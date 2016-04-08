@@ -135,7 +135,7 @@ for(let key in data.data) {
   const browsersTwoStat = stats[browsersTwoArray[0]][browsersTwoArray[1]];
   if(browsersFirstStat != browsersTwoStat) {
     result.push([
-      useData.title,
+      useData.title.length > 40 ? key : useData.title,
       renderStat(browsersFirstStat),
       renderStat(browsersTwoStat)
     ]);
