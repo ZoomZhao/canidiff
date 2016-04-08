@@ -1,0 +1,32 @@
+{
+  "name": "canidiff",
+  "version": "0.1.0",
+  "description": "diff caniuse data from console",
+  "keywords": [
+    "canidiff",
+    "caniuse",
+    "diff"
+  ],
+  "bin": {
+    "canidiff": "./index.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": {
+    "email": "zoom.zhao@gmail.com",
+    "name": "Zoom Zhao"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ZoomZhao/canidiff"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "browserslist": "^1.3.1",
+    "caniuse-db": "~1.0.0",
+    "cli-color": "^1.1.0",
+    "text-table": "^0.2.0",
+    "yargs": "^4.4.0"
+  }
+}
