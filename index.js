@@ -16,6 +16,12 @@ const argv = require('yargs')
     default: false,
     describe: "UTF-8 symbols replacement with ASCII description"
   })
+  .option('major', {
+    alias: 'M',
+    type: 'boolean',
+    default: false,
+    describe: "major diff only"
+  })
   .help('help')
   .argv
 
@@ -58,15 +64,20 @@ if(argv["ascii"]){
 }
 
 if((Date.now()/1000 - data.updated) > 30*60*60*24) {
-  console.warn(clc.yellow(`${resultmap.w}  
+  console.warn(clc.yellow(`${resultmap.w}
     Caniuse data is more than 30 days out of date!
     Consider updating: npm install caniuse-cmd`));
 }
 
-const getBrowser = (version) => {
+const getBrowser = (selection) => {
   try {
-    if(browserslist(version)) {
-      return browserslist(version)[0];
+    if(browserslist(selection)) {
+      const b = browserslist(selection)[0];
+      const bList = b.split(' ');
+      return {
+        browser: bList[0],
+        version: bList[1]
+      };
     } else {
       console.error(clc.red(`${resultmap.n} Unknown browser ${browsers[0]}`));
       return false;
@@ -83,28 +94,71 @@ if(browsers.length < 1) {
   console.error(clc.red(`need at least 1 argument to compare`));
   return;
 }
-const browsersFirst = getBrowser(browsers[0]);
-if(!browsersFirst) {
+const browserLeft = getBrowser(browsers[0]);
+if(!browserLeft) {
   return;
 }
 
 // compare to last version when only 1 args
-let browserTwoArgs = '';
+let rightSelection = '';
 if(browsers.length === 1) {
-  let b = browsersFirst.split(' ')[0];
-  browserTwoArgs = `last 1 ${b} versions`;
+  let b = browserLeft.browser;
+  rightSelection = `last 1 ${b} versions`;
 } else {
-  browserTwoArgs = browsers[1];
+  rightSelection = browsers[1];
 }
-const browsersTwo = getBrowser(browserTwoArgs);
-if(!browsersTwo) {
+const browserRight = getBrowser(rightSelection);
+if(!browserRight) {
   return;
 }
 
-const renderStat = (stat) => {
+const resolveStat = (stat) => {
   let statArray = stat.split(' ');
-  let support = statArray[0];
-  let out = statArray.map((item) => {
+  let support = statArray.shift();
+  return {
+    support,
+    extra: statArray
+  }
+}
+
+let result = [];
+for(let key in data.data) {
+  const useData = data.data[key];
+  const stats = useData.stats;
+  const leftStat = stats[browserLeft.browser][browserLeft.version];
+  const rightStat = stats[browserRight.browser][browserRight.version];
+  if(leftStat != rightStat) {
+    result.push({
+      key,
+      title: useData.title,
+      left: resolveStat(leftStat),
+      right: resolveStat(rightStat)
+    });
+  }
+}
+
+if (argv["major"]) {
+  result = result.filter(item => {
+    return item.left.support !== item.right.support;
+  })
+}
+
+if(result.length == 0) {
+  console.log(clc.green('Congratulations, No Diff'));
+  return;
+}
+
+let displayTable = [];
+// add table header
+displayTable.push([
+  'features',
+  `${browserLeft.browser} ${browserLeft.version}`,
+  `${browserRight.browser} ${browserRight.version}`
+]);
+
+const renderStat = (stat) => {
+  let out = `${resultmap[stat.support]} `;
+  out += stat.extra.map((item) => {
     if(item.startsWith('#')){
       return item.substr(1).split('').map(function(num) {
         return resultmap.s.charAt(num);
@@ -112,7 +166,7 @@ const renderStat = (stat) => {
     };
     return resultmap[item] || item;
   }).join(' ');
-  switch(support) {
+  switch(stat.support) {
     case 'y':
       return clc.green(out);
     case 'n':
@@ -125,37 +179,16 @@ const renderStat = (stat) => {
   return out;
 }
 
-let result = [];
-for(let key in data.data) {
-  const useData = data.data[key];
-  const stats = useData.stats;
-  const browsersFirstArray = browsersFirst.split(' ');
-  const browsersTwoArray = browsersTwo.split(' ');
-  const browsersFirstStat = stats[browsersFirstArray[0]][browsersFirstArray[1]];
-  const browsersTwoStat = stats[browsersTwoArray[0]][browsersTwoArray[1]];
-  if(browsersFirstStat != browsersTwoStat) {
-    result.push([
-      useData.title.length > 40 ? key : useData.title,
-      renderStat(browsersFirstStat),
-      renderStat(browsersTwoStat)
-    ]);
-  }
-}
-
-if(result.length == 0) {
-  console.log(clc.green('Congratulations, No Diff'));
-  return;
-}
-
-// add table header
-result.unshift([
-  'features',
-  browsersFirst,
-  browsersTwo
-]);
+result.forEach(item => {
+  displayTable.push([
+    item.title.length > 40 ? item.key : item.title,
+    renderStat(item.left),
+    renderStat(item.right)
+  ])
+})
 
 console.log(
-  table(result, {
+  table(displayTable, {
     align: [ 'l', 'c', 'c' ],
     stringLength: function(s) { return clc.getStrippedLength(s) }
   })
