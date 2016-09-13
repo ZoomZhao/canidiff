@@ -8,7 +8,7 @@ const os = require('os');
 const browserslist = require('browserslist');
 const table = require('text-table');
 
-const argv = require('yargs')
+const yargs = require('yargs')
   .usage('$0 [args] <browser> [browser]')
   .option('ascii', {
     alias: 'A',
@@ -22,8 +22,13 @@ const argv = require('yargs')
     default: false,
     describe: "major diff only"
   })
-  .help('help')
-  .argv
+  .help('help');
+const argv = yargs.argv;
+
+if(argv._.length < 1) {
+  yargs.showHelp();
+  return;
+}
 
 let resultmap = {
   "y": "✔",
@@ -66,7 +71,7 @@ if(argv["ascii"]){
 if((Date.now()/1000 - data.updated) > 30*60*60*24) {
   console.warn(clc.yellow(`${resultmap.w}
     Caniuse data is more than 30 days out of date!
-    Consider updating: npm install caniuse-cmd`));
+    Consider updating: npm install canidiff -g`));
 }
 
 const getBrowser = (selection) => {
@@ -90,10 +95,6 @@ const getBrowser = (selection) => {
 
 
 const browsers = argv._;
-if(browsers.length < 1) {
-  console.error(clc.red(`need at least 1 argument to compare`));
-  return;
-}
 const browserLeft = getBrowser(browsers[0]);
 if(!browserLeft) {
   return;
